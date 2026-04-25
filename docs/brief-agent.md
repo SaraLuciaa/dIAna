@@ -8,7 +8,7 @@ Mantener y documentar un **agente de ventas** conversacional en español, con ba
 
 ## 2. Contexto
 
-El repositorio **diana-sales-agent** combina un propósito **educativo** (LangChain, herramientas, capas ordenadas) con un caso de uso **ventas y asistencia comercial**: redacción de mensajes, orientación en conversaciones y datos del catálogo cuando la herramienta de tienda esté disponible.
+El repositorio **diana** combina un propósito **educativo** (LangChain, herramientas, capas ordenadas) con un caso de uso **ventas y asistencia comercial**: redacción de mensajes, orientación en conversaciones y datos del catálogo cuando la herramienta de tienda esté disponible.
 
 **Qué existe hoy:**
 

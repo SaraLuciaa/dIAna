@@ -15,6 +15,13 @@ Una **CLI** (`src/index.ts`) reutiliza `runAgent` para desarrollo y pruebas ráp
 
 ## Responsabilidades por módulo
 
+### Market data (pipeline de señales en tiempo real)
+
+- **`src/marketData/binanceKlineStream.ts`** — Proveedor de datos de mercado (MVP): se conecta al WebSocket de Binance y expone velas (`kline`) de 1 minuto **normalizadas**. Incluye reconexión automática y tolerancia a mensajes malformados. **No** calcula indicadores ni toma decisiones.
+- **`src/marketData/asyncQueue.ts`** — Cola async in-memory para consumo via `for await ... of` (MVP).
+- **`src/marketData/types.ts`** — Contrato `NormalizedCandle` (estructura obligatoria para el resto del pipeline).
+- **`src/marketData/example.ts`** — Ejemplo de consumo (callback) para desarrollo rápido.
+
 ### Configuración y núcleo del agente
 
 - **`src/config/env.ts`** — Carga `env.local` y valida variables con Zod.
@@ -40,6 +47,7 @@ Una **CLI** (`src/index.ts`) reutiliza `runAgent` para desarrollo y pruebas ráp
 - **OpenRouter** vía API compatible con OpenAI.
 - **Inyección** de `runAgent` / executor en el servidor para pruebas.
 - **Separación cliente-servidor** para no exponer secretos y poder cambiar la UI sin duplicar LangChain.
+- **Market data desacoplado**: `src/marketData/*` es reutilizable y no depende del agente; emite únicamente eventos de vela normalizados.
 - **Salida a red hacia la tienda** solo desde el servidor, con **`STORE_BASE_URL`** en entorno (sin URL en código) y lista blanca de prefijos `/api`, no URLs arbitrarias elegidas por el modelo.
 
 ## Resumen
@@ -50,4 +58,10 @@ Una **CLI** (`src/index.ts`) reutiliza `runAgent` para desarrollo y pruebas ráp
 | Servidor API | Sesiones, HTTP y llamada a `runAgent`. |
 | `src/agent/*` | Modelo, prompt de ventas, herramientas y ejecución. |
 
-Se puede ampliar este documento con el contrato exacto de cada endpoint del chat y, si en el futuro se añaden CRM u otras fuentes, las nuevas integraciones y su lugar en las capas. Rutas típicas del WS PrestaShop (tras configurar la clave): `/api?output_format=JSON`, `/api/products?output_format=JSON`, `/api/categories?output_format=JSON`.
+## Extensiones futuras (sin implementar)
+
+- **Múltiples símbolos**: multiplexing (varios streams) o `/stream?streams=` para consolidar sockets.
+- **Persistencia**: escribir a Kafka/Redis Streams/DB (el `NormalizedCandle` es el contrato).
+- **Backpressure real**: límites de buffer, políticas de drop, métricas.
+- **Observabilidad**: contadores de reconexión, latencia, y tasa de mensajes.
+- **Validación estricta**: Zod para payloads entrantes si se requiere “fail-closed”.

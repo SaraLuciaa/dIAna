@@ -2,7 +2,7 @@
 
 ## 1. Objetivo del plan
 
-Consolidar **dIAna** (**diana-sales-agent**): agente de **ventas** en español, con base didáctica, sobre **TypeScript + Node.js + LangChain + OpenRouter**, que:
+Consolidar **dIAna** (**diana**): agente de **ventas** en español, con base didáctica, sobre **TypeScript + Node.js + LangChain + OpenRouter**, que:
 
 - responda con claridad en lenguaje natural (orientación comercial, borradores, seguimiento);
 - use **consulta a la tienda** (`http_get_api_tienda`, HTTP bajo `/api/`) cuando aporte valor;
@@ -29,7 +29,6 @@ Consolidar **dIAna** (**diana-sales-agent**): agente de **ventas** en español, 
 
 - Entrada por **consola** y por **API** (`sessionId`, `message`, respuesta con `reply` e historial recortado).
 - Respuestas en **español** alineadas al rol de ventas definido en `prompt.ts`.
-- Herramientas: **http_get_api_tienda** (catálogo/sistema vía `GET` acotado a `STORE_BASE_URL` + `/api/...`, ver `env.example`).
 - Validación de configuración al arrancar (OpenRouter, puerto del chat, etc.).
 - Endpoints según `src/chatServer.ts`; cliente de prueba en `web/`.
 
