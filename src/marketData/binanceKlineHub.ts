@@ -1,4 +1,5 @@
 import { BinanceKlineStream } from "./binanceKlineStream.js";
+import { normalizeCandle } from "./normalization/normalizeCandle.js";
 import type { NormalizedCandle } from "./types.js";
 
 type HubEntry = {
@@ -38,8 +39,11 @@ export class BinanceKlineHub {
 
     const buffer: NormalizedCandle[] = [];
     const stream = new BinanceKlineStream({ symbol: sym });
-    const off = stream.onCandle((c) => {
-      buffer.push(c);
+    const off = stream.onMessage((raw) => {
+      const candle = normalizeCandle(raw, { provider: "binance", interval: "1m", symbolHint: sym });
+      if (!candle) return;
+      candle.symbol = candle.symbol.toUpperCase();
+      buffer.push(candle);
       const cap = this.subs.get(sym)?.max ?? max;
       if (buffer.length > cap) buffer.splice(0, buffer.length - cap);
     });
@@ -87,7 +91,7 @@ export class BinanceKlineHub {
     }
 
     const want = Math.max(1, Math.min(opts.count, 500));
-    const timeoutMs = Math.max(50, Math.min(opts.timeoutMs, 120_000));
+    const timeoutMs = Math.max(50, Math.min(opts.timeoutMs, 600_000));
     const pollMs = Math.max(25, Math.min(opts.pollMs ?? 200, 2000));
     const onlyClosed = opts.onlyClosed !== false;
 

@@ -1,7 +1,5 @@
 import WebSocket, { type RawData } from "ws";
 import { AsyncQueue } from "./asyncQueue.js";
-import { normalizeCandle } from "./normalization/normalizeCandle.js";
-import type { NormalizedCandle } from "./types.js";
 
 export type BinanceKlineStreamOptions = {
   /** e.g. BTCUSDT */
@@ -23,7 +21,12 @@ export type BinanceKlineStreamOptions = {
   baseUrl?: string;
 };
 
-export type CandleHandler = (candle: NormalizedCandle) => void | Promise<void>;
+/**
+ * Raw WS payload (typically a parsed JSON object). If JSON parsing fails, you may receive a string frame.
+ */
+export type RawMarketWsEvent = unknown;
+
+export type RawMarketWsHandler = (event: RawMarketWsEvent) => void | Promise<void>;
 
 export class BinanceKlineStream {
   private readonly interval: "1m";
@@ -39,8 +42,8 @@ export class BinanceKlineStream {
   private reconnectAttempt = 0;
   private reconnectTimer: NodeJS.Timeout | null = null;
 
-  private readonly queue = new AsyncQueue<NormalizedCandle>();
-  private readonly subscribers = new Set<CandleHandler>();
+  private readonly queue = new AsyncQueue<RawMarketWsEvent>();
+  private readonly subscribers = new Set<RawMarketWsHandler>();
 
   constructor(options: BinanceKlineStreamOptions) {
     this.symbol = options.symbol.trim().toUpperCase();
@@ -69,7 +72,7 @@ export class BinanceKlineStream {
   /**
    * Subscribe with a callback consumer. Returns an unsubscribe function.
    */
-  onCandle(handler: CandleHandler): () => void {
+  onMessage(handler: RawMarketWsHandler): () => void {
     this.subscribers.add(handler);
     return () => {
       this.subscribers.delete(handler);
@@ -79,7 +82,7 @@ export class BinanceKlineStream {
   /**
    * Async iterator consumer (in-memory queue). Only emits if `enableQueue` is true.
    */
-  stream(): AsyncIterable<NormalizedCandle> {
+  stream(): AsyncIterable<RawMarketWsEvent> {
     return this.queue;
   }
 
@@ -123,22 +126,18 @@ export class BinanceKlineStream {
     ws.on("message", (data: RawData) => {
       try {
         const text = typeof data === "string" ? data : data.toString("utf8");
-        const parsed: unknown = JSON.parse(text) as unknown;
-        const candle = normalizeCandle(parsed, {
-          provider: "binance",
-          interval: this.interval,
-          symbolHint: this.symbol,
-          logger: this.logger
-        });
-        if (!candle) return;
+        let event: RawMarketWsEvent;
+        try {
+          event = JSON.parse(text) as unknown;
+        } catch {
+          // Keep transport honest: if it isn't JSON, surface the raw string to downstream normalizers/filters.
+          event = text;
+        }
 
-        // Ensure symbol stays normalized to current stream context.
-        candle.symbol = candle.symbol.toUpperCase();
-
-        if (this.enableQueue) this.queue.push(candle);
+        if (this.enableQueue) this.queue.push(event);
         if (this.subscribers.size > 0) {
           for (const handler of this.subscribers) {
-            Promise.resolve(handler(candle)).catch((e) => {
+            Promise.resolve(handler(event)).catch((e) => {
               this.log("warn", "subscriber handler error", { error: toErrorString(e) });
             });
           }

@@ -1,5 +1,5 @@
 export { BinanceKlineStream } from "./binanceKlineStream.js";
-export type { BinanceKlineStreamOptions, CandleHandler } from "./binanceKlineStream.js";
+export type { BinanceKlineStreamOptions, RawMarketWsEvent, RawMarketWsHandler } from "./binanceKlineStream.js";
 export { BinanceKlineHub } from "./binanceKlineHub.js";
 export type { NormalizedCandle } from "./types.js";
 export {

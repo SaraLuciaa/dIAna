@@ -1,4 +1,5 @@
 import { BinanceKlineStream } from "./binanceKlineStream.js";
+import { normalizeCandle } from "./normalization/normalizeCandle.js";
 
 // Simple example consumer:
 // - callback subscription
@@ -20,7 +21,10 @@ async function main(): Promise<void> {
   });
 
   // Callback-based consumption (example: push into another component / queue).
-  stream.onCandle((candle) => {
+  stream.onMessage((raw) => {
+    const candle = normalizeCandle(raw, { provider: "binance", interval: "1m", symbolHint: symbol });
+    if (!candle) return;
+
     events++;
     if (candle.is_closed) closedCandles++;
     else openUpdates++;

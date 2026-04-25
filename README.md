@@ -25,7 +25,7 @@ Monorepo pequeño en **TypeScript (ESM)** con:
 
 ### Market data
 
-- `src/marketData/binanceKlineStream.ts`: **solo transporte** (WS + reconnect) y delega normalización.
+- `src/marketData/binanceKlineStream.ts`: **solo transporte** (WS + reconnect) y emite **frames JSON crudos** (`unknown`) hacia consumidores; la normalización ocurre en `normalizeCandle` (p.ej. desde `BinanceKlineHub` / tu pipeline).
 - `src/marketData/binanceKlineHub.ts`: **MVP hub** (1 suscripción por símbolo + ring buffer) para consumo vía tools.
 - `src/marketData/normalization/*`: **normalización** multi-proveedor (hoy: Binance).
 - `src/marketData/types.ts`: contrato `NormalizedCandle`.

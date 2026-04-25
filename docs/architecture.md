@@ -17,8 +17,8 @@ Una **CLI** (`src/index.ts`) reutiliza `runAgent` para desarrollo y pruebas ráp
 
 ### Market data (pipeline de señales en tiempo real)
 
-- **`src/marketData/binanceKlineStream.ts`** — Ingesta (MVP): se conecta al WebSocket de Binance, maneja reconexión y tolera mensajes malformados. **No** contiene lógica de indicadores ni decisiones.
-- **`src/marketData/binanceKlineHub.ts`** — Hub MVP: mantiene **una suscripción por símbolo** y un **ring buffer** en RAM para lecturas discretas (p. ej. desde tools del agente).
+- **`src/marketData/binanceKlineStream.ts`** — Ingesta (MVP): se conecta al WebSocket de Binance, maneja reconexión y tolera mensajes malformados. Emite **eventos crudos** (JSON parseado como `unknown`). **No** normaliza aquí (eso es responsabilidad de `normalizeCandle` / adapters).
+- **`src/marketData/binanceKlineHub.ts`** — Hub MVP: mantiene **una suscripción por símbolo** y un **ring buffer** en RAM para lecturas discretas (p. ej. desde tools del agente). Aplica `normalizeCandle` a cada frame crudo antes de guardar `NormalizedCandle`.
 - **`src/marketData/normalization/*`** — **Normalización** (contrato interno): transforma payloads crudos del proveedor a `NormalizedCandle` (`normalizeCandle`, adapters por proveedor, y `normalizeCandleStream` para consumo async).
 - **`src/marketData/asyncQueue.ts`** — Cola async in-memory para consumo via `for await ... of` (MVP).
 - **`src/marketData/types.ts`** — Contrato `NormalizedCandle` (estructura obligatoria para el resto del pipeline).
