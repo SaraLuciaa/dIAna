@@ -1,13 +1,8 @@
-export type MacdSnapshot = {
-  value: number;
-  signal: number;
-  histogram: number;
-};
+import type { IndicatorSnapshot } from "../indicators/types.js";
 
-export type IndicatorSnapshot = {
-  rsi: number;
-  macd: MacdSnapshot;
-};
+export type { IndicatorSnapshot };
+
+export type MacdSnapshot = IndicatorSnapshot["macd"];
 
 /** Single-tick input; include `previousMacd` when the stream has a prior MACD sample. */
 export type SignalDetectorInput = {

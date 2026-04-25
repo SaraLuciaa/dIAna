@@ -1,5 +1,5 @@
 import { IndicatorEngine } from "./indicatorEngine.js";
-import type { NormalizedCandle } from "../marketData/types.js";
+import type { NormalizedCandle } from "../types.js";
 import type { IndicatorSnapshot } from "./types.js";
 
 function candle(

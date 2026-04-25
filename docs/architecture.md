@@ -22,6 +22,8 @@ Una **CLI** (`src/index.ts`) reutiliza `runAgent` para desarrollo y pruebas ráp
 - **`src/marketData/normalization/*`** — **Normalización** (contrato interno): transforma payloads crudos del proveedor a `NormalizedCandle` (`normalizeCandle`, adapters por proveedor, y `normalizeCandleStream` para consumo async).
 - **`src/marketData/asyncQueue.ts`** — Cola async in-memory para consumo via `for await ... of` (MVP).
 - **`src/marketData/types.ts`** — Contrato `NormalizedCandle` (estructura obligatoria para el resto del pipeline).
+- **`src/marketData/indicators/*`** — **Indicadores técnicos** (solo matemática): ventana de `NormalizedCandle` → RSI/MACD. Sin WebSocket, sin LLM, sin reglas de trading.
+- **`src/marketData/signals/*`** — **Detección por reglas** (solo patrones): indicadores + metadatos → `TradingSignal | null`. Sin LLM, sin alertas.
 - **`src/marketData/example.ts`** — Ejemplo/manual de consumo del stream (no es núcleo del producto; sirve para smoke tests locales).
 
 ### Configuración y núcleo del agente
@@ -29,6 +31,7 @@ Una **CLI** (`src/index.ts`) reutiliza `runAgent` para desarrollo y pruebas ráp
 - **`src/config/env.ts`** — Carga `env.local` y valida variables con Zod.
 - **`src/agent/model.ts`** — `ChatOpenAI` hacia OpenRouter.
 - **`src/agent/prompt.ts`** — Rol del agente (mercado/oportunidades) e instrucciones de uso de herramientas.
+- **`src/agent/opportunity/*`** — **Evaluación con LLM** (decisión): señal estructurada + indicadores → `should_alert`, `confidence`, etc. No calcula indicadores ni detecta señales; usa `createModel` y LangChain.
 - **`src/agent/tools/*`** — Herramientas LangChain registradas en `createAgent.ts`.
   - Hoy: **`src/agent/tools/marketData.ts`** (`market_data_*`) para suscribirse a velas Binance 1m, leer un buffer reciente, **esperar** N velas (modo CLI) y desuscribirse.
 - **`src/agent/createAgent.ts`** — Ensambla modelo, herramientas y prompt.
@@ -50,7 +53,8 @@ Una **CLI** (`src/index.ts`) reutiliza `runAgent` para desarrollo y pruebas ráp
 - **OpenRouter** vía API compatible con OpenAI.
 - **Inyección** de `runAgent` / executor en el servidor para pruebas.
 - **Separación cliente-servidor** para no exponer secretos y poder cambiar la UI sin duplicar LangChain.
-- **Market data desacoplado**: `src/marketData/*` es reutilizable y no depende del agente; emite únicamente eventos de vela normalizados.
+- **Market data desacoplado del agente**: `src/marketData/*` (stream, normalización, hub, **indicadores**, **señales por reglas**) no importa LangChain ni `createAgent`; solo dominio de mercado y pipeline numérico.
+- **Capa de decisión LLM bajo `src/agent/`**: la evaluación de oportunidades vive junto al modelo para no invertir dependencias (el mercado no “conoce” al agente).
 
 ## Resumen
 
@@ -59,7 +63,8 @@ Una **CLI** (`src/index.ts`) reutiliza `runAgent` para desarrollo y pruebas ráp
 | Cliente HTTP | Entrada del usuario y visualización/consumo de respuestas. |
 | Servidor API | Sesiones, HTTP y llamada a `runAgent`. |
 | `src/agent/*` | Modelo, prompt (mercado), herramientas y ejecución. |
-| `src/marketData/*` | Ingesta WS, normalización y utilidades MVP (hub/buffer). |
+| `src/marketData/*` | Ingesta WS, normalización, hub/buffer, indicadores y detección de señales por reglas. |
+| `src/agent/opportunity/*` | Evaluación LLM de señales (filtrar / explicar; no alerta directa). |
 
 ## Extensiones futuras (sin implementar)
 

@@ -28,9 +28,16 @@ Monorepo pequeño en **TypeScript (ESM)** con:
 - `src/marketData/binanceKlineStream.ts`: **solo transporte** (WS + reconnect) y emite **frames JSON crudos** (`unknown`) hacia consumidores; la normalización ocurre en `normalizeCandle` (p.ej. desde `BinanceKlineHub` / tu pipeline).
 - `src/marketData/binanceKlineHub.ts`: **MVP hub** (1 suscripción por símbolo + ring buffer) para consumo vía tools.
 - `src/marketData/normalization/*`: **normalización** multi-proveedor (hoy: Binance).
+- `src/marketData/indicators/*`: **indicadores** (RSI/MACD) sobre `NormalizedCandle`; sin LLM ni WS.
+- `src/marketData/signals/*`: **detección por reglas** (señales estructuradas); sin LLM.
+- `src/marketData/index.ts`: re-exporta también indicadores y señales para un punto de entrada del pipeline.
 - `src/marketData/types.ts`: contrato `NormalizedCandle`.
 - `src/marketData/asyncQueue.ts`: cola async (útil si consumes `stream()` del WS directamente).
 - `src/marketData/example.ts`: ejemplo/manual smoke del WS (no es núcleo del producto).
+
+### Evaluación LLM (decisión)
+
+- `src/agent/opportunity/*`: **señal → juicio** (`evaluateOpportunity`), LangChain + `createModel`; no envía alertas ni toca mercado.
 
 ### Cliente web
 

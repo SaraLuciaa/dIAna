@@ -1,4 +1,4 @@
-import type { NormalizedCandle } from "../marketData/types.js";
+import type { NormalizedCandle } from "../types.js";
 
 export type IndicatorSnapshot = {
   rsi: number;

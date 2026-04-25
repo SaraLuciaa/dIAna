@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { macdLast, rsiWilderLast } from "./batch.js";
 import { IndicatorEngine } from "./indicatorEngine.js";
-import type { NormalizedCandle } from "../marketData/types.js";
+import type { NormalizedCandle } from "../types.js";
 
 function c(
   ts: number,
