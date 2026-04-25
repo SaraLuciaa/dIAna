@@ -1,28 +1,27 @@
-# Brief del agente dIAna (ventas)
+# Brief del agente dIAna (oportunidades de mercado / Binance)
 
 ## 1. Título de la tarea
 
-Mantener y documentar un **agente de ventas** conversacional en español, con base didáctica, que responda con claridad, use **http_get_api_tienda** cuando aporte valor, y se exponga por **API HTTP** con memoria de sesión además de la **consola**.
+Mantener y documentar un **agente conversacional** en español, con base didáctica, enfocado en **explorar oportunidades de mercado** usando datos públicos de **Binance**, que se exponga por **API HTTP** con memoria de sesión además de la **consola**.
 
 ---
 
 ## 2. Contexto
 
-El repositorio **diana** combina un propósito **educativo** (LangChain, herramientas, capas ordenadas) con un caso de uso **ventas y asistencia comercial**: redacción de mensajes, orientación en conversaciones y datos del catálogo cuando la herramienta de tienda esté disponible.
+El repositorio **diana** combina un propósito **educativo** (LangChain, herramientas, capas ordenadas) con un caso de uso **mercados cripto**: lectura de velas recientes, razonamiento prudente sobre contexto de precio/volumen, y guía para que el usuario formule hipótesis (sin prometer resultados).
 
 **Qué existe hoy:**
 
 - **Consola:** una pregunta por invocación; el agente decide si usa herramientas y responde en español.
 - **API HTTP (Express):** chat con `sessionId` y mensaje; historial en **RAM** (últimos 20 mensajes por sesión), salud y recuperación de historial.
-- **Cliente web:** página estática en `web/` para probar la API local; debe mantenerse alineada con el contrato del backend.
-- **Herramientas:** **http_get_api_tienda** (`GET` acotado a `/api/...` sobre la URL de tienda configurada).
+- **Cliente (opcional):** cualquier consumidor HTTP del API (puede existir una UI estática en `web/` si se agrega al repo).
+- **Herramientas (hoy):** market data MVP (`market_data_*`) para suscripción/consulta de velas Binance 1m (ver `src/agent/tools/marketData.ts`).
 
 **Cuidados a corto plazo:**
 
-- El modelo **no** sustituye datos reales de producto, precios ni políticas: si no están en la conversación ni en la respuesta de la tienda, no los inventes.
+- El modelo **no** inventa datos de mercado: si no hay evidencia en la conversación o en la salida de tools, dilo explícitamente.
 - Configuración validada al arrancar (OpenRouter obligatorio, etc.); documentar `env` y archivo local.
-- **Pruebas automatizadas** aún por introducir; calidad con revisión y pruebas manuales.
-- **Scripts de arranque** en `package.json` pueden no coincidir con el entrypoint real (`serverListen.ts`): conviene alinearlos.
+- **Pruebas automatizadas** existen para normalización de velas (`npm test`), pero el resto del sistema aún depende bastante de prueba manual.
 
 ---
 
@@ -39,18 +38,18 @@ El repositorio **diana** combina un propósito **educativo** (LangChain, herrami
 
 - **Entrada:** CLI o JSON del cliente.
 - **Ejecución:** `runAgent` con historial opcional.
-- **Composición:** modelo, prompt de ventas, herramientas (**http_get_api_tienda**).
+- **Composición:** modelo, prompt (mercado), herramientas (hoy: **market data**).
 - **Configuración:** `env.local` + validación centralizada.
 
 ### Input esperado
 
-Lenguaje natural en español: consultas de ventas, borradores de mensajes, objeciones o preguntas sobre el catálogo cuando corresponda usar la tienda.
+Lenguaje natural en español: preguntas sobre lectura de mercado, hipótesis, gestión de riesgo (a nivel educativo) y solicitudes de datos cuando corresponda usar tools.
 
 **Resultado esperado**
 
-- Español, tono comercial adecuado y didáctico donde aplique.
+- Español, tono profesional y didáctico donde aplique.
 - Uso de herramientas solo cuando aporte.
-- Sin afirmar datos de catálogo, precios ni disponibilidad no confirmados por el usuario.
+- Sin afirmar certezas de mercado ni “señales infalibles”; separa hechos (datos) de interpretación.
 
 ---
 
@@ -65,7 +64,7 @@ Lenguaje natural en español: consultas de ventas, borradores de mensajes, objec
 
 ## 5. Definition of Done (DoD)
 
-- El brief coincide con **CLI + API**, herramienta **http_get_api_tienda**, y dependencia principal **OpenRouter**.
-- Límites claros: sin inventar ofertas comerciales; memoria en servidor; calidad manual hasta tener tests.
+- El brief coincide con **CLI + API**, herramientas actuales del agente, y dependencia principal **OpenRouter**.
+- Límites claros: sin asesoría financiera personalizada; memoria en servidor; calidad manual hasta tener tests.
 - Coherencia con `architecture.md` y `src/`.
 - Cambios futuros: `env` válido, prueba manual del flujo tocado, contrato cliente-servidor si aplica, docs actualizadas.

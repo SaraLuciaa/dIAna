@@ -1,22 +1,7 @@
 import WebSocket, { type RawData } from "ws";
 import { AsyncQueue } from "./asyncQueue.js";
+import { normalizeCandle } from "./normalization/normalizeCandle.js";
 import type { NormalizedCandle } from "./types.js";
-
-type BinanceKlineMessage = {
-  e?: string;
-  s?: string;
-  k?: {
-    t?: number; // start time (ms)
-    s?: string; // symbol
-    i?: string; // interval
-    o?: string;
-    c?: string;
-    h?: string;
-    l?: string;
-    v?: string;
-    x?: boolean; // is this kline closed?
-  };
-};
 
 export type BinanceKlineStreamOptions = {
   /** e.g. BTCUSDT */
@@ -138,8 +123,13 @@ export class BinanceKlineStream {
     ws.on("message", (data: RawData) => {
       try {
         const text = typeof data === "string" ? data : data.toString("utf8");
-        const parsed = JSON.parse(text) as BinanceKlineMessage;
-        const candle = normalizeBinanceKline(parsed);
+        const parsed: unknown = JSON.parse(text) as unknown;
+        const candle = normalizeCandle(parsed, {
+          provider: "binance",
+          interval: this.interval,
+          symbolHint: this.symbol,
+          logger: this.logger
+        });
         if (!candle) return;
 
         // Ensure symbol stays normalized to current stream context.
@@ -213,51 +203,6 @@ export class BinanceKlineStream {
   private log(level: "debug" | "info" | "warn" | "error", message: string, meta?: unknown): void {
     this.logger?.({ level, message, meta });
   }
-}
-
-export function normalizeBinanceKline(msg: BinanceKlineMessage): NormalizedCandle | null {
-  if (!msg || msg.e !== "kline") return null;
-  const k = msg.k;
-  if (!k || k.i !== "1m") return null;
-
-  const symbol = (k.s ?? msg.s ?? "").trim().toUpperCase();
-  if (!symbol) return null;
-
-  const tMs = typeof k.t === "number" ? k.t : Number.NaN;
-  if (!Number.isFinite(tMs)) return null;
-
-  const open = safeNumber(k.o);
-  const high = safeNumber(k.h);
-  const low = safeNumber(k.l);
-  const close = safeNumber(k.c);
-  const volume = safeNumber(k.v);
-  if (
-    open === null ||
-    high === null ||
-    low === null ||
-    close === null ||
-    volume === null
-  ) {
-    return null;
-  }
-
-  return {
-    symbol,
-    timestamp: Math.floor(tMs / 1000),
-    open,
-    high,
-    low,
-    close,
-    volume,
-    is_closed: k.x === true
-  };
-}
-
-function safeNumber(v: unknown): number | null {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (typeof v !== "string") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
 }
 
 function toErrorString(e: unknown): string {

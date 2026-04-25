@@ -5,7 +5,7 @@ async function main(): Promise<void> {
   const traceFlag = argv.includes("--trace");
   const input =
     argv.filter((a) => a !== "--trace").join(" ").trim() ||
-    "Redacta un mensaje corto de seguimiento comercial para un cliente que pidió cotización y no ha respondido.";
+    "Ayúdame a explorar oportunidades en BTCUSDT usando velas de 1m: qué datos necesitas ver primero y cómo los interpretarías sin recomendar operar.";
 
   const { reply, trace, traceWarnings } = await runAgent(input, {
     verbose: traceFlag,

@@ -13,7 +13,7 @@
     "dev:server": "tsx watch src/serverListen.ts",
     "dev:marketdata": "tsx src/marketData/example.ts",
     "start": "node dist/serverListen.js",
-    "test": "tsx --test src/agent/tools/store.test.ts"
+    "test": "tsx --test \"src/**/*.test.ts\""
   },
   "keywords": [],
   "author": "",

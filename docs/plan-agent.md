@@ -2,10 +2,10 @@
 
 ## 1. Objetivo del plan
 
-Consolidar **dIAna** (**diana**): agente de **ventas** en español, con base didáctica, sobre **TypeScript + Node.js + LangChain + OpenRouter**, que:
+Consolidar **dIAna** (**diana**): agente de **mercado** (oportunidades / lectura) en español, con base didáctica, sobre **TypeScript + Node.js + LangChain + OpenRouter**, que:
 
-- responda con claridad en lenguaje natural (orientación comercial, borradores, seguimiento);
-- use **consulta a la tienda** (`http_get_api_tienda`, HTTP bajo `/api/`) cuando aporte valor;
+- responda con claridad en lenguaje natural (lectura de contexto, hipótesis, riesgos, siguientes pasos);
+- pueda usar **tools** cuando aporten valor (hoy: **market data** MVP vía `market_data_*`);
 - exponga la misma lógica por **consola** y por **API HTTP** (chat con `sessionId` e historial en RAM);
 - mantenga arquitectura por capas y documentación alineada con `docs/brief-agent.md`;
 - avance hacia **pruebas automatizadas** y scripts de arranque fiables.
@@ -14,7 +14,7 @@ Consolidar **dIAna** (**diana**): agente de **ventas** en español, con base did
 
 ## 2. Principios de ejecución
 
-1. **Claridad pedagógica y comercial:** flujo entendible; no inventar datos de producto ni políticas.
+1. **Claridad pedagógica:** flujo entendible; no inventar “hechos” de mercado sin evidencia (datos del usuario o salida de tools).
 2. **Cambios pequeños y verificables:** ejecutar, probar (manual o test) y documentar.
 3. **Capas definidas:** entrada, ejecución con historial, composición del agente, herramientas, configuración.
 4. **Un solo núcleo de agente:** CLI y servidor reutilizan `runAgent` / `buildAgentExecutor`.
@@ -28,13 +28,14 @@ Consolidar **dIAna** (**diana**): agente de **ventas** en español, con base did
 ### Incluye
 
 - Entrada por **consola** y por **API** (`sessionId`, `message`, respuesta con `reply` e historial recortado).
-- Respuestas en **español** alineadas al rol de ventas definido en `prompt.ts`.
+- Respuestas en **español** alineadas al rol de mercado definido en `prompt.ts`.
 - Validación de configuración al arrancar (OpenRouter, puerto del chat, etc.).
 - Endpoints según `src/chatServer.ts`; cliente de prueba en `web/`.
+- Market data MVP en `src/marketData/*` + tools `market_data_*` en `src/agent/tools/marketData.ts`.
 
 ### No incluye (salvo decisión explícita)
 
-- Búsquedas externas tipo SerpApi, scraping genérico de HTML ni integraciones de inventario o CRM más allá del `GET` acotado a la tienda configurada.
+- Motor de señales/indicadores, ejecución de órdenes, riesgo, portfolio, etc.
 - Orquestación multiagente.
 - Persistencia durable de sesiones en base de datos.
 - Autenticación, facturación o paneles de administración.
@@ -46,17 +47,17 @@ Consolidar **dIAna** (**diana**): agente de **ventas** en español, con base did
 
 ### Fase 0: Alineación y línea base
 
-**Objetivo:** contexto compartido y escenarios de prueba realistas para ventas.
+**Objetivo:** contexto compartido y escenarios de prueba realistas para lectura de mercado (MVP con velas 1m).
 
 **Actividades:**
 
 - Revisar `brief-agent.md` y `architecture.md` frente al código.
 - Inventario: CLI, API, herramientas en `createAgent.ts`, `env.example` vs `getEnv`.
-- Escenarios prioritarios: consulta de catálogo vía tienda, conversación sin herramientas, dos turnos en API con el mismo `sessionId`.
+- Escenarios prioritarios: conversación sin herramientas, uso de market data (subscribe → recent → unsubscribe), dos turnos en API con el mismo `sessionId`.
 
 **Entregables:** resumen de estado y lista de escenarios.
 
-**Criterio de salida:** el equipo entiende alcance **solo ventas + http_get_api_tienda**.
+**Criterio de salida:** el equipo entiende alcance **mercado + tools actuales (market data MVP)**.
 
 ---
 
@@ -74,14 +75,14 @@ Consolidar **dIAna** (**diana**): agente de **ventas** en español, con base did
 
 ---
 
-### Fase 2: Comportamiento del agente de ventas
+### Fase 2: Comportamiento del agente de mercado
 
 **Objetivo:** tono y decisiones de herramientas acertadas.
 
 **Actividades:**
 
-- Revisar `prompt.ts`: no inventar catálogo; cuándo usar `http_get_api_tienda`.
-- Validar escenarios: solo texto comercial, consulta a tienda, combinado.
+- Revisar `prompt.ts`: no inventar datos; cuándo usar `market_data_*`.
+- Validar escenarios: solo marco conceptual, lectura de velas, combinado.
 - Ajustar prompt solo con evidencia de fallos repetidos.
 
 **Criterio de salida:** respuestas útiles, en español, sin prometer condiciones no dichas por el usuario.
@@ -104,7 +105,7 @@ Consolidar **dIAna** (**diana**): agente de **ventas** en español, con base did
 
 ### Fase 4: Pruebas y calidad
 
-**Objetivo:** sustituir el placeholder de `npm test`.
+**Objetivo:** ampliar cobertura más allá de los tests existentes (hoy hay tests de normalización de velas).
 
 **Actividades:** runner (Vitest o Node test), tests de `getEnv`, utilidades de herramientas, opcional `supertest` con `runAgent` mockeado.
 
@@ -114,7 +115,7 @@ Consolidar **dIAna** (**diana**): agente de **ventas** en español, con base did
 
 ### Fase 5: Documentación y handoff
 
-**Objetivo:** README y docs coherentes; roadmap incremental (CRM, catálogo, persistencia, etc.).
+**Objetivo:** README y docs coherentes; roadmap incremental (más timeframes, order book, persistencia, backtesting, etc.).
 
 **Criterio de salida:** una persona nueva puede ejecutar y extender el proyecto.
 
@@ -131,8 +132,8 @@ Consolidar **dIAna** (**diana**): agente de **ventas** en español, con base did
 
 ## 6. Definition of Done operativa
 
-- Comportamiento acorde a **agente de ventas** y español claro.
-- Casos prioritarios: consulta a tienda, mixtos, conversación sin herramientas.
+- Comportamiento acorde a **agente de mercado** y español claro.
+- Casos prioritarios: market data, mixtos, conversación sin herramientas.
 - CLI y API documentados; `web/` alineado.
 - `env.example` y README coherentes con `getEnv`.
 - Brief, plan y arquitectura reflejan el repositorio.
@@ -141,8 +142,8 @@ Consolidar **dIAna** (**diana**): agente de **ventas** en español, con base did
 
 ## 7. Riesgos y mitigaciones
 
-- **Alucinaciones comerciales:** mitigar con prompt explícito y no afirmar precios/stock sin fuente en la conversación.
-- **Herramienta de tienda mal usada:** mitigar con descripciones de tool y ejemplos en pruebas manuales.
+- **Alucinaciones / sobrecerteza:** mitigar con prompt explícito y separar **hechos** (velas) de **interpretación**.
+- **Tools de market data mal usadas:** mitigar con descripciones de tool, límites de buffer y pruebas manuales (fugas de WS, suscripciones olvidadas).
 - **Memoria solo en RAM:** documentar; roadmap si hace falta persistencia.
 - **Regresiones en API:** tests de contrato / mocks.
 - **Docs vs código:** Fase 0 y revisión al cerrar cada entrega.
