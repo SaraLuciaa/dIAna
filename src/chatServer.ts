@@ -3,7 +3,8 @@ import type { ReactAgent } from "langchain";
 import cors from "cors";
 import express from "express";
 import { buildAgentExecutor } from "./agent/createAgent.js";
-import { runAgent as defaultRunAgent } from "./agent/runAgent.js";
+import { runAgent as defaultRunAgent, type RunAgentResult } from "./agent/runAgent.js";
+import { getEnv } from "./config/env.js";
 
 const MAX_SESSION_MESSAGES = 20;
 
@@ -26,7 +27,11 @@ function toWireMessage(m: BaseMessage): { role: string; content: string } {
 }
 
 export interface CreateChatAppOptions {
-  runAgent?: typeof defaultRunAgent;
+  /** Por defecto devuelve `RunAgentResult`; se admite `string` en tests antiguos. */
+  runAgent?: (
+    message: string,
+    options?: Parameters<typeof defaultRunAgent>[1]
+  ) => Promise<RunAgentResult | string>;
 }
 
 /**
@@ -78,11 +83,19 @@ export function createChatApp(options: CreateChatAppOptions = {}): express.Expre
 
       const historyBefore = trimSession(sessions.get(sessionId) ?? []);
       const executor = useDefaultRunAgent ? getAgent() : undefined;
-      const reply = await run(message, {
+      const env = getEnv();
+      const debugBody = req.body?.debug === true || req.body?.debug === "true";
+      const includeTrace = debugBody || env.AGENT_TRACE;
+      const runResult = await run(message, {
         executor,
         chatHistory: historyBefore,
-        verbose: false
+        verbose: includeTrace,
+        includeTrace
       });
+      const reply = typeof runResult === "string" ? runResult : runResult.reply;
+      const trace = typeof runResult === "string" ? undefined : runResult.trace;
+      const traceWarnings =
+        typeof runResult === "string" ? undefined : runResult.traceWarnings;
 
       const historyAfter = trimSession([
         ...historyBefore,
@@ -93,7 +106,10 @@ export function createChatApp(options: CreateChatAppOptions = {}): express.Expre
 
       res.json({
         reply,
-        messages: historyAfter.map(toWireMessage)
+        messages: historyAfter.map(toWireMessage),
+        ...(includeTrace && trace !== undefined
+          ? { trace, ...(traceWarnings && traceWarnings.length > 0 ? { traceWarnings } : {}) }
+          : {})
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
