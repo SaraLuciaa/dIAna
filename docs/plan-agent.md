@@ -31,7 +31,7 @@ El agente debe:
 
 ### Incluye
 
-- Conexión a datos de mercado vía **WebSocket** (Finnhub recomendado).
+- Conexión a datos de mercado vía **WebSocket** (Binance klines).
 - Buffer de velas por símbolo (`CandleBuffer`).
 - Cálculo de **RSI** y **MACD** en la capa de Indicators (`trading-signals`).
 - Orquestación con **LangGraph** (nodos: computeIndicators, evaluateLLM, decideAction, notify).
@@ -63,7 +63,7 @@ El agente debe:
 - Definir símbolos iniciales a monitorear y umbrales de RSI/MACD.
 - Inventario actual del código vs nueva estructura de carpetas propuesta.
 
-**Entregables:** Documentación actualizada + decisión clara de API WebSocket principal (Finnhub o Binance).
+**Entregables:** Documentación actualizada + decisión clara de API WebSocket principal (**Binance**) y símbolos/intervalos iniciales.
 
 **Criterio de salida:** Todos los documentos están coherentes entre sí.
 
@@ -74,7 +74,7 @@ El agente debe:
 **Actividades:**
 - Implementar `MarketDataService` con WebSocket.
 - Crear `CandleBuffer` (buffer circular de velas OHLCV por símbolo).
-- Conectar a Finnhub (o Binance) y suscribirse a velas (kline/candle updates).
+- Conectar a **Binance** y suscribirse a velas (kline updates).
 - Normalizar datos entrantes a formato estándar.
 
 **Criterio de salida:** Se pueden recibir velas en tiempo real y mantener buffer actualizado por símbolo.
@@ -165,6 +165,6 @@ El agente debe:
 ## 8. Próximos pasos inmediatos
 
 1. Finalizar la actualización de los tres documentos (brief, architecture y plan).
-2. Decidir API WebSocket principal (Finnhub vs Binance) y obtener keys.
+2. Confirmar Binance como WebSocket principal (klines) y definir símbolos/intervalos iniciales.
 3. Iniciar Fase 1: Implementar `MarketDataService` y `CandleBuffer`.
 4. Revisar y aprobar la nueva estructura de carpetas propuesta en `architecture.md`.

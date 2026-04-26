@@ -2,28 +2,26 @@ import { MarketDataService } from "./marketDataService.js";
 import { getEnv } from "../config/env.js";
 
 /**
- * Demo Finnhub (trades) → velas 15m (candleClose) → CandleBuffer.
+ * Demo Binance (klines) → velas cerradas → CandleBuffer.
  *
  * Uso:
- * - `npm run dev:marketdata -- AAPL MSFT`
+ * - `npm run dev:marketdata -- BTCUSDT ETHUSDT`
  *
- * Nota: Una vela de 15m puede tardar en cerrarse. Para ver actividad inmediata,
- * mira el log de conexión y suscripción; el cierre ocurrirá al cambiar el bucket.
+ * Nota: Solo se inserta en el buffer cuando `x=true` (vela cerrada).
  */
 const env = getEnv();
 const symbols = process.argv.slice(2).map((s) => s.trim()).filter(Boolean);
 if (symbols.length === 0) {
-  symbols.push("AAPL");
+  symbols.push("BTCUSDT");
 }
 
 const svc = new MarketDataService({
-  provider: "finnhub",
-  apiKey: env.FINNHUB_API_KEY,
-  finnhubBaseUrl: env.FINNHUB_WS_BASE_URL,
-  candleIntervalMs: 15 * 60 * 1000
+  provider: "binance",
+  binanceBaseUrl: env.BINANCE_WS_BASE_URL,
+  binanceKlineInterval: "15m"
 });
 
-console.log(`[marketdata] connecting to Finnhub trades WS… symbols=${symbols.join(",")}`);
+console.log(`[marketdata] connecting to Binance klines WS… symbols=${symbols.join(",")}`);
 svc.connect();
 for (const s of symbols) {
   svc.subscribe(s);

@@ -2,7 +2,7 @@
 
 ## 1. Título de la tarea
 
-Desarrollar y mantener un **agente inteligente** en español, con propósito **educativo**, enfocado en la **detección de oportunidades de mercado tradicionales** usando análisis técnico (inicialmente **RSI** y **MACD**) con datos en tiempo real vía **WebSockets**.
+Desarrollar y mantener un **agente inteligente** en español, con propósito **educativo**, enfocado en la **detección de oportunidades en mercados cripto (spot)** usando análisis técnico (inicialmente **RSI** y **MACD**) con datos en tiempo real vía **WebSockets**.
 
 El agente se expone mediante **CLI** y **API HTTP**, y está diseñado para ser extensible hacia alertas automáticas y backtesting.
 
@@ -26,7 +26,7 @@ El repositorio **diana** combina un fuerte componente **educativo** (LangChain/L
 - Agente basado en LangChain clásico.
 
 **Dirección actual:**
-- WebSocket-first (Finnhub recomendado para mercados tradicionales, Binance para crypto).
+- WebSocket-first con **Binance** (klines cerradas) + warmup de histórico por REST (klines).
 - Cálculo de indicadores con librería dedicada (`trading-signals`).
 - Orquestación con **LangGraph** (stateful, con nodos y edges condicionales).
 - Invocación del LLM solo cuando existe una señal técnica potencial (para optimizar costo y latencia).
@@ -58,7 +58,7 @@ El repositorio **diana** combina un fuerte componente **educativo** (LangChain/L
 
 ### Comportamiento del Agente
 
-- Monitorea símbolos configurados en tiempo real vía WebSocket.
+- Monitorea símbolos configurados en tiempo real vía **Binance WebSocket** (kline/candles).
 - Calcula indicadores técnicos de forma determinista.
 - Solo invoca al LLM cuando detecta una señal técnica potencial (RSI sobrevendido/sobrecomprado o cruce MACD).
 - Responde siempre en **español**, con tono **profesional, didáctico y prudente**.

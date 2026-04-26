@@ -64,6 +64,11 @@ Definidas/validadas en `src/config/env.ts`:
 - **`OPENROUTER_TEMPERATURE`** (default: `0`)
 - **`OPENROUTER_HTTP_REFERER`** (opcional)
 - **`OPENROUTER_APP_TITLE`** (opcional)
+- **`BINANCE_WS_BASE_URL`** (default: `wss://stream.binance.com:9443`)
+- **`BINANCE_REST_BASE_URL`** (default: `https://api.binance.com`)
+- **`FINNHUB_API_KEY`** (opcional; legado)
+- **`FINNHUB_WS_BASE_URL`** (default: `wss://ws.finnhub.io`)
+- **`FINNHUB_REST_BASE_URL`** (default: `https://finnhub.io/api/v1`)
 - **`CHAT_API_PORT`** (default: `3001`)
 - **`AGENT_TRACE`** (default: `false`)
 
@@ -99,8 +104,8 @@ src/
 
 ## Estado del MVP (importante)
 
-- El **LangGraph** actual es mínimo: **evalúa el mensaje con el LLM** y devuelve `reply`.
-- `src/data/` y `src/indicators/` ya están creados como base, pero la integración “WS → buffer → indicadores → decisión” se completa en iteraciones siguientes.
+- El **LangGraph** ya orquesta: **computeIndicators → (condicional) evaluateLLM → decideAction → notify**.
+- Para no esperar el cierre real de una vela de **15m**, `computeIndicators` carga velas 15m vía **Binance REST (klines)** y calcula RSI/MACD; el WS queda para actualización continua (en `src/data/`).
 
 ## Notas
 

@@ -1,6 +1,6 @@
 # Arquitectura del Proyecto - Market Opportunity Agent
 
-Este proyecto implementa un **agente inteligente** orientado a la **detección de oportunidades de mercado tradicionales** (acciones, forex, índices, etc.). Es un **MVP educativo** que combina datos de mercado en tiempo real con análisis técnico (RSI + MACD inicialmente) y evaluación asistida por LLM.
+Este proyecto implementa un **agente inteligente** orientado a la **detección de oportunidades en mercados cripto** (spot, pares tipo `BTCUSDT`). Es un **MVP educativo** que combina datos de mercado en tiempo real con análisis técnico (RSI + MACD inicialmente) y evaluación asistida por LLM.
 
 El enfoque principal es **eficiencia y bajo costo**: se utilizan **WebSockets** para recibir datos sin polling innecesario y el LLM solo se invoca cuando hay señales técnicas potenciales.
 
@@ -14,7 +14,7 @@ El enfoque principal es **eficiencia y bajo costo**: se utilizan **WebSockets** 
 
 La arquitectura se divide en capas bien separadas para mantener claridad, testeabilidad y escalabilidad:
 
-- **Data Layer** — Conexión WebSocket, buffering de velas OHLCV y normalización de datos.
+- **Data Layer** — Conexión WebSocket (Binance), buffering de velas OHLCV y normalización de datos.
 - **Indicators Layer** — Cálculo puro y eficiente de indicadores técnicos (sin LLM).
 - **Analysis Layer** — Orquestación con **LangGraph** + evaluación con LLM.
 - **Alert & Output Layer** — Decisión final, notificaciones y logging.
@@ -63,6 +63,8 @@ src/
 ### Data Layer
 - **`src/data/marketDataService.ts`** — Gestiona conexiones WebSocket.
 - **`src/data/candleBuffer.ts`** — Buffer circular de velas por símbolo (mantener últimas 200-500 velas para cálculos).
+- **`src/data/websocket/binance/*`** — Cliente WS de klines + parsing a vela (`Candle`).
+- **`src/data/websocket/binance/rest.ts`** — Warmup de histórico vía REST klines (para no esperar el cierre de la vela).
 
 ### Indicators Layer
 - **`src/indicators/`** — Cálculo de **RSI** y **MACD** usando la librería `trading-signals`.
@@ -106,7 +108,8 @@ El graph permite loops (re-evaluación) y branching (hold vs alert).
 ## Tecnologías Recomendadas
 - **Orquestación**: LangGraph.js + LangChain.js
 - **Modelo LLM**: OpenRouter
-- **Datos en tiempo real**: Finnhub WebSocket 
+- **Datos en tiempo real**: Binance WebSocket (klines)
+- **Histórico**: Binance REST (`/api/v3/klines`)
 - **Indicadores**: `trading-signals`
 - **Validación**: Zod
 - **Persistencia** (futuro): Prisma + SQLite/PostgreSQL

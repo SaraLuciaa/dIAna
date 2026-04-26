@@ -2,6 +2,8 @@ import WebSocket from "ws";
 import { CandleBuffer, type Candle } from "./candleBuffer.js";
 import { FinnhubWsClient } from "./websocket/finnhub/client.js";
 import { TradeCandleAggregator } from "./websocket/finnhub/tradeToCandle.js";
+import { BinanceWsClient } from "./websocket/binance/client.js";
+import { parseBinanceKlineToCandle } from "./websocket/binance/parseKline.js";
 
 export interface MarketDataServiceOptions {
   /**
@@ -11,13 +13,18 @@ export interface MarketDataServiceOptions {
   /** Cantidad de velas a mantener por símbolo. */
   bufferSize?: number;
   /** Proveedor (MVP: Finnhub). */
-  provider?: "finnhub";
+  provider?: "finnhub" | "binance";
   /** API key de Finnhub (requerida si provider=finnhub). */
   apiKey?: string;
   /** Base URL WS de Finnhub (default: wss://ws.finnhub.io). */
   finnhubBaseUrl?: string;
   /** Timeframe de vela en ms (default: 15m). */
   candleIntervalMs?: number;
+
+  /** Base URL WS de Binance (default: wss://stream.binance.com:9443). */
+  binanceBaseUrl?: string;
+  /** Intervalo de kline Binance (default: 15m). Ej: 1m,5m,15m,1h */
+  binanceKlineInterval?: string;
 }
 
 /**
@@ -31,6 +38,8 @@ export class MarketDataService {
   private readonly buffers = new Map<string, CandleBuffer>();
   private finnhub: FinnhubWsClient | null = null;
   private aggregator: TradeCandleAggregator | null = null;
+  private binance: BinanceWsClient | null = null;
+  private binanceInterval: string = "15m";
 
   constructor(opts: MarketDataServiceOptions) {
     this.url = opts.url ? String(opts.url) : null;
@@ -50,6 +59,23 @@ export class MarketDataService {
         onTrade: (tr) => this.aggregator?.ingestTrade(tr)
       });
     }
+
+    if (opts.provider === "binance") {
+      this.binanceInterval = opts.binanceKlineInterval ?? "15m";
+      this.binance = new BinanceWsClient({
+        baseUrl: opts.binanceBaseUrl,
+        onMessage: (frame) => {
+          // ignore non-kline frames
+          if (!frame || typeof frame !== "object") return;
+          const f: any = frame;
+          if (f.e !== "kline" || !f.k) return;
+          const parsed = parseBinanceKlineToCandle(f);
+          if (parsed.isClosed) {
+            this.ingestCandle(parsed.symbol, parsed.candle);
+          }
+        }
+      });
+    }
   }
 
   getBuffer(symbol: string): CandleBuffer {
@@ -65,6 +91,10 @@ export class MarketDataService {
   connect(onRawMessage?: (data: WebSocket.RawData) => void): void {
     if (this.finnhub) {
       this.finnhub.connect();
+      return;
+    }
+    if (this.binance) {
+      this.binance.connect();
       return;
     }
     if (this.ws) return;
@@ -90,6 +120,7 @@ export class MarketDataService {
 
   disconnect(): void {
     this.finnhub?.disconnect();
+    this.binance?.disconnect();
     this.ws?.close();
     this.ws = null;
   }
@@ -101,10 +132,16 @@ export class MarketDataService {
 
   subscribe(symbol: string): void {
     this.finnhub?.subscribe(symbol);
+    if (this.binance) {
+      this.binance.subscribeKlines(symbol, this.binanceInterval);
+    }
   }
 
   unsubscribe(symbol: string): void {
     this.finnhub?.unsubscribe(symbol);
+    if (this.binance) {
+      this.binance.unsubscribeKlines(symbol, this.binanceInterval);
+    }
   }
 }
 

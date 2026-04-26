@@ -10,8 +10,9 @@ const envSchema = z.object({
   OPENROUTER_TEMPERATURE: z.coerce.number().default(0),
   OPENROUTER_HTTP_REFERER: z.string().url().optional(),
   OPENROUTER_APP_TITLE: z.string().min(1).optional(),
-  FINNHUB_API_KEY: z.string().min(1, "FINNHUB_API_KEY is required"),
-  FINNHUB_WS_BASE_URL: z.string().default("wss://ws.finnhub.io"),
+  
+  BINANCE_WS_BASE_URL: z.string().default("wss://stream.binance.com:9443"),
+  BINANCE_REST_BASE_URL: z.string().default("https://api.binance.com"),
   CHAT_API_PORT: z.coerce.number().int().positive().default(3001),
   /** Si true, el POST /api/chat con el mismo efecto que `debug: true` incluye `trace` en la respuesta (y stderr en CLI con --trace). */
   AGENT_TRACE: z
