@@ -17,9 +17,9 @@ La arquitectura objetivo está documentada en `docs/architecture.md` y el brief 
 npm install
 ```
 
-2) Crear `.env.local` (en la raíz del repo) con al menos:
+2) Copiar `env.example` → `.env.local` (en la raíz del repo) y completar al menos:
 
-- `OPENROUTER_API_KEY`
+- `OPENROUTER_API_KEY` (y lo que aplique según `env.example` / `src/config/env.ts`)
 
 3) Probar por CLI:
 

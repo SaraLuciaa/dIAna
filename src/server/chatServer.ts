@@ -1,4 +1,5 @@
 import { AIMessage, HumanMessage, type BaseMessage } from "@langchain/core/messages";
+import { Bot, webhookCallback } from "grammy";
 import cors from "cors";
 import express from "express";
 import { runAgent as defaultRunAgent, type RunAgentResult } from "../agent/runAgent.js";
@@ -38,10 +39,12 @@ export interface CreateChatAppOptions {
 export function createChatApp(options: CreateChatAppOptions = {}): express.Express {
   const run = options.runAgent ?? defaultRunAgent;
   const sessions = new Map<string, BaseMessage[]>();
+  const env = getEnv();
+  const telegramBot = env.TELEGRAM_BOT_TOKEN ? new Bot(env.TELEGRAM_BOT_TOKEN) : null;
 
   const app = express();
   app.disable("x-powered-by");
-  app.use(express.json({ limit: "64kb" }));
+  app.use(express.json({ limit: "2mb" }));
   app.use(
     cors({
       origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -75,7 +78,6 @@ export function createChatApp(options: CreateChatAppOptions = {}): express.Expre
       }
 
       const historyBefore = trimSession(sessions.get(sessionId) ?? []);
-      const env = getEnv();
       const debugBody = req.body?.debug === true || req.body?.debug === "true";
       const includeTrace = debugBody || env.AGENT_TRACE;
       const runResult = await run(message, {
@@ -107,6 +109,43 @@ export function createChatApp(options: CreateChatAppOptions = {}): express.Expre
       res.status(500).json({ error: msg });
     }
   });
+
+  if (telegramBot) {
+    telegramBot.on("message:text", async (ctx) => {
+      const text = String(ctx.message.text ?? "").trim();
+      if (!text) return;
+
+      const chatId = String(ctx.chat?.id ?? "");
+      const sessionId = `tg:${chatId}`;
+      const historyBefore = trimSession(sessions.get(sessionId) ?? []);
+      const includeTrace = env.AGENT_TRACE;
+      const runResult = await run(text, { chatHistory: historyBefore, verbose: includeTrace, includeTrace });
+      const reply = typeof runResult === "string" ? runResult : runResult.reply;
+      const historyAfter = trimSession([...historyBefore, new HumanMessage(text), new AIMessage(reply)]);
+      sessions.set(sessionId, historyAfter);
+
+      // Telegram límite ~4096 chars; fragmentación simple
+      const chunkSize = 3800;
+      if (reply.length <= chunkSize) {
+        await ctx.reply(reply);
+        return;
+      }
+      for (let i = 0; i < reply.length; i += chunkSize) {
+        await ctx.reply(reply.slice(i, i + chunkSize));
+      }
+    });
+
+    // Webhook (HTTPS público) — NO uses polling
+    const path = env.TELEGRAM_WEBHOOK_PATH.startsWith("/")
+      ? env.TELEGRAM_WEBHOOK_PATH
+      : `/${env.TELEGRAM_WEBHOOK_PATH}`;
+    app.use(
+      path,
+      webhookCallback(telegramBot, "express", {
+        secretToken: env.TELEGRAM_WEBHOOK_SECRET
+      })
+    );
+  }
 
   return app;
 }
