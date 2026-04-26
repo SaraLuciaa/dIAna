@@ -25,6 +25,8 @@ export interface MarketDataServiceOptions {
   binanceBaseUrl?: string;
   /** Intervalo de kline Binance (default: 15m). Ej: 1m,5m,15m,1h */
   binanceKlineInterval?: string;
+  /** Llamado tras añadir una vela cerrada al buffer (p. ej. bucle de alertas proactivas). */
+  onCandleClose?: (symbol: string, candle: Candle) => void;
 }
 
 /**
@@ -40,10 +42,12 @@ export class MarketDataService {
   private aggregator: TradeCandleAggregator | null = null;
   private binance: BinanceWsClient | null = null;
   private binanceInterval: string = "15m";
+  private readonly onCandleClose?: (symbol: string, candle: Candle) => void;
 
   constructor(opts: MarketDataServiceOptions) {
     this.url = opts.url ? String(opts.url) : null;
     this.bufferSize = opts.bufferSize ?? 300;
+    this.onCandleClose = opts.onCandleClose;
 
     if (opts.provider === "finnhub") {
       if (!opts.apiKey) {
@@ -128,6 +132,7 @@ export class MarketDataService {
   /** Helper para desarrollo: inserta una vela ya normalizada en el buffer. */
   ingestCandle(symbol: string, candle: Candle): void {
     this.getBuffer(symbol).push(candle);
+    this.onCandleClose?.(symbol, candle);
   }
 
   subscribe(symbol: string): void {

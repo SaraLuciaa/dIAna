@@ -16,6 +16,16 @@ export interface RunAgentOptions {
    * En HTTP puedes usar `debug: true` en el body o `AGENT_TRACE=true` en entorno.
    */
   includeTrace?: boolean;
+  /**
+   * Expone señal térmica/LLM del estado final (para filtrar envíos proactivos a Telegram).
+   */
+  includeAlertMeta?: boolean;
+}
+
+export interface AgentAlertMeta {
+  hasPotential: boolean;
+  /** `null` si no hubo evaluación LLM (p.ej. sin señal técnica). */
+  shouldAlert: boolean | null;
 }
 
 export interface RunAgentResult {
@@ -23,6 +33,7 @@ export interface RunAgentResult {
   trace?: AgentTraceStep[];
   /** Heurísticas: misma herramienta con el mismo input muchas veces seguidas, etc. */
   traceWarnings?: string[];
+  alertMeta?: AgentAlertMeta;
 }
 
 export async function runAgent(input: string, options: RunAgentOptions = {}): Promise<RunAgentResult> {
@@ -38,8 +49,20 @@ export async function runAgent(input: string, options: RunAgentOptions = {}): Pr
 
   const reply = typeof (result as any)?.reply === "string" ? String((result as any).reply) : "";
 
+  const st = (result as any)?.technicalSignal as { hasPotential?: boolean } | undefined;
+  const ev = (result as any)?.llm?.evaluation;
+  const alertMeta: AgentAlertMeta | undefined =
+    options.includeAlertMeta === true
+      ? {
+          hasPotential: st?.hasPotential === true,
+          shouldAlert: ev && typeof (ev as { should_alert?: boolean }).should_alert === "boolean"
+            ? (ev as { should_alert: boolean }).should_alert
+            : null
+        }
+      : undefined;
+
   if (!traceCollector) {
-    return { reply };
+    return alertMeta ? { reply, alertMeta } : { reply };
   }
 
   const trace = traceCollector.steps;
@@ -52,5 +75,7 @@ export async function runAgent(input: string, options: RunAgentOptions = {}): Pr
     }
   }
 
-  return { reply, trace, traceWarnings };
+  return alertMeta
+    ? { reply, trace, traceWarnings, alertMeta }
+    : { reply, trace, traceWarnings };
 }

@@ -2,6 +2,7 @@ import { AIMessage, HumanMessage, type BaseMessage } from "@langchain/core/messa
 import { Bot, webhookCallback } from "grammy";
 import cors from "cors";
 import express from "express";
+import { startProactiveAlertLoop } from "../alerts/proactiveAlertLoop.js";
 import { runAgent as defaultRunAgent, type RunAgentResult } from "../agent/runAgent.js";
 import { getEnv } from "../config/env.js";
 
@@ -116,6 +117,9 @@ export function createChatApp(options: CreateChatAppOptions = {}): express.Expre
       if (!text) return;
 
       const chatId = String(ctx.chat?.id ?? "");
+      if (env.TELEGRAM_LOG_CHAT_ID) {
+        console.error("[telegram] incoming chat.id:", ctx.chat?.id, "(use for TELEGRAM_ALERT_CHAT_ID)");
+      }
       const sessionId = `tg:${chatId}`;
       const historyBefore = trimSession(sessions.get(sessionId) ?? []);
       const includeTrace = env.AGENT_TRACE;
@@ -145,6 +149,8 @@ export function createChatApp(options: CreateChatAppOptions = {}): express.Expre
         secretToken: env.TELEGRAM_WEBHOOK_SECRET
       })
     );
+
+    startProactiveAlertLoop({ bot: telegramBot, env, runAgent: run });
   }
 
   return app;
