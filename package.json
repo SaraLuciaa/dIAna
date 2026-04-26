@@ -11,7 +11,7 @@
     "build": "tsc",
     "cli": "tsx src/index.ts",
     "dev:server": "tsx watch src/serverListen.ts",
-    "dev:marketdata": "tsx src/marketData/example.ts",
+    "dev:marketdata": "tsx src/data/example.ts",
     "start": "node dist/serverListen.js",
     "test": "tsx --test \"src/**/*.test.ts\""
   },
@@ -20,11 +20,13 @@
   "license": "ISC",
   "dependencies": {
     "@langchain/core": "^1.1.41",
+    "@langchain/langgraph": "^1.2.9",
     "@langchain/openai": "^1.4.4",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "langchain": "^1.3.4",
+    "trading-signals": "^6.2.0",
     "ws": "^8.18.3",
     "zod": "^4.3.6"
   },

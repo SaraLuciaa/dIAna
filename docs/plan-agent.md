@@ -1,158 +1,170 @@
-# Plan detallado para construir y fortalecer la aplicación del agente
+# Plan detallado para construir y fortalecer el agente dIAna
 
 ## 1. Objetivo del plan
 
-Consolidar **dIAna** (**diana**): agente de **mercado** (oportunidades / lectura) en español, con base didáctica, sobre **TypeScript + Node.js + LangChain + OpenRouter**, que:
+Consolidar **dIAna**: un **agente inteligente de oportunidades de mercado** en español, con fuerte base **didáctica y educativa**, construido sobre **TypeScript + Node.js + LangGraph + OpenRouter**.
 
-- responda con claridad en lenguaje natural (lectura de contexto, hipótesis, riesgos, siguientes pasos);
-- pueda usar **tools** cuando aporten valor (hoy: **market data** MVP vía `market_data_*`);
-- exponga la misma lógica por **consola** y por **API HTTP** (chat con `sessionId` e historial en RAM);
-- mantenga arquitectura por capas y documentación alineada con `docs/brief-agent.md`;
-- avance hacia **pruebas automatizadas** y scripts de arranque fiables.
+El agente debe:
+
+- Detectar posibles oportunidades de mercado usando **análisis técnico** (inicialmente **RSI 14** y **MACD 12,26,9**).
+- Recibir datos de mercado en **tiempo real vía WebSockets** (sin polling innecesario).
+- Calcular indicadores de forma determinista y eficiente.
+- Usar un **LLM** solo para interpretar señales estructuradas y generar razonamiento prudente.
+- Exponerse tanto por **CLI** como por **API HTTP** (con memoria de sesión en RAM).
+- Mantener una arquitectura limpia por capas y documentación actualizada.
 
 ---
 
 ## 2. Principios de ejecución
 
-1. **Claridad pedagógica:** flujo entendible; no inventar “hechos” de mercado sin evidencia (datos del usuario o salida de tools).
-2. **Cambios pequeños y verificables:** ejecutar, probar (manual o test) y documentar.
-3. **Capas definidas:** entrada, ejecución con historial, composición del agente, herramientas, configuración.
-4. **Un solo núcleo de agente:** CLI y servidor reutilizan `runAgent` / `buildAgentExecutor`.
-5. **Documentar** cambios de comportamiento, API y variables de entorno.
-6. **No romper** consola ni contrato del API sin actualizar cliente y docs.
+1. **Claridad pedagógica**: el código y el agente deben ser fáciles de entender y modificar.
+2. **Separación estricta de responsabilidades**: el LLM nunca calcula indicadores; solo evalúa señales estructuradas.
+3. **Eficiencia**: WebSocket + cálculo de indicadores en código + invocación del LLM solo en señales potenciales.
+4. **Cambios pequeños e iterativos**: implementar, probar (manual o automatizado) y documentar.
+5. **Un solo núcleo**: tanto la CLI como la API reutilizan la misma lógica (`runAgent` / LangGraph).
+6. **Documentación alineada**: `brief-agent.md`, `architecture.md` y este plan deben reflejar siempre el estado real del código.
+7. **Tono prudente**: nunca prometer resultados, siempre separar datos objetivos de interpretación.
 
 ---
 
-## 3. Alcance funcional
+## 3. Alcance funcional actual
 
 ### Incluye
 
-- Entrada por **consola** y por **API** (`sessionId`, `message`, respuesta con `reply` e historial recortado).
-- Respuestas en **español** alineadas al rol de mercado definido en `prompt.ts`.
-- Validación de configuración al arrancar (OpenRouter, puerto del chat, etc.).
-- Endpoints según `src/chatServer.ts`; cliente de prueba en `web/`.
-- Market data MVP en `src/marketData/*` + tools `market_data_*` en `src/agent/tools/marketData.ts`.
+- Conexión a datos de mercado vía **WebSocket** (Finnhub recomendado).
+- Buffer de velas por símbolo (`CandleBuffer`).
+- Cálculo de **RSI** y **MACD** en la capa de Indicators (`trading-signals`).
+- Orquestación con **LangGraph** (nodos: computeIndicators, evaluateLLM, decideAction, notify).
+- Evaluación estructurada del LLM (`should_alert`, `action`, `confidence`, `reason`, `risk_level`).
+- CLI y API HTTP con memoria de sesión en RAM.
+- Respuestas siempre en **español**, tono profesional y didáctico.
+- Validación centralizada de entorno con Zod.
 
-### No incluye (salvo decisión explícita)
+### No incluye (por ahora)
 
-- Motor de señales/indicadores, ejecución de órdenes, riesgo, portfolio, etc.
-- Orquestación multiagente.
-- Persistencia durable de sesiones en base de datos.
-- Autenticación, facturación o paneles de administración.
-- Streaming de tokens (mejora futura opcional).
+- Ejecución automática de órdenes o integración con brokers.
+- Persistencia durable de señales o sesiones (queda en RAM).
+- Análisis multi-timeframe completo.
+- Backtesting automático.
+- Dashboard web avanzado.
+- Multi-agente (Risk Manager, News Analyst, etc.).
+- Autenticación o sistema de usuarios.
 
 ---
 
 ## 4. Plan por fases
 
-### Fase 0: Alineación y línea base
+### Fase 0: Alineación y preparación (Actual)
 
-**Objetivo:** contexto compartido y escenarios de prueba realistas para lectura de mercado (MVP con velas 1m).
-
-**Actividades:**
-
-- Revisar `brief-agent.md` y `architecture.md` frente al código.
-- Inventario: CLI, API, herramientas en `createAgent.ts`, `env.example` vs `getEnv`.
-- Escenarios prioritarios: conversación sin herramientas, uso de market data (subscribe → recent → unsubscribe), dos turnos en API con el mismo `sessionId`.
-
-**Entregables:** resumen de estado y lista de escenarios.
-
-**Criterio de salida:** el equipo entiende alcance **mercado + tools actuales (market data MVP)**.
-
----
-
-### Fase 1: Arquitectura y operación local
-
-**Objetivo:** arranque sin fricción y responsabilidades claras.
+**Objetivo:** Tener toda la documentación y visión alineada con la nueva arquitectura.
 
 **Actividades:**
+- Actualizar `brief-agent.md`, `architecture.md` y este `plan-agent.md`.
+- Definir símbolos iniciales a monitorear y umbrales de RSI/MACD.
+- Inventario actual del código vs nueva estructura de carpetas propuesta.
 
-- Confirmar mapa: `src/index.ts`, `chatServer.ts`, `serverListen.ts`, `runAgent.ts`, `createAgent.ts`, `config/env.ts`, `agent/tools/*`.
-- Alinear `package.json` (dev/start/build) con el entrypoint real del servidor.
-- Guía corta para añadir una herramienta nueva (registro, prompt, env si aplica).
+**Entregables:** Documentación actualizada + decisión clara de API WebSocket principal (Finnhub o Binance).
 
-**Criterio de salida:** cualquiera ubica en minutos dónde cambiar HTTP, agente o configuración.
+**Criterio de salida:** Todos los documentos están coherentes entre sí.
 
----
+### Fase 1: Data Layer + WebSocket (Prioridad alta)
 
-### Fase 2: Comportamiento del agente de mercado
-
-**Objetivo:** tono y decisiones de herramientas acertadas.
-
-**Actividades:**
-
-- Revisar `prompt.ts`: no inventar datos; cuándo usar `market_data_*`.
-- Validar escenarios: solo marco conceptual, lectura de velas, combinado.
-- Ajustar prompt solo con evidencia de fallos repetidos.
-
-**Criterio de salida:** respuestas útiles, en español, sin prometer condiciones no dichas por el usuario.
-
----
-
-### Fase 3: API, cliente y configuración
-
-**Objetivo:** contrato explícito y cliente de prueba coherente.
+**Objetivo:** Recibir datos de mercado en tiempo real de forma eficiente.
 
 **Actividades:**
+- Implementar `MarketDataService` con WebSocket.
+- Crear `CandleBuffer` (buffer circular de velas OHLCV por símbolo).
+- Conectar a Finnhub (o Binance) y suscribirse a velas (kline/candle updates).
+- Normalizar datos entrantes a formato estándar.
 
-- Documentar `POST /api/chat`, `GET /api/chat/history`, `GET /api/health` y límites (cuerpo, 20 mensajes).
-- Alinear `web/index.html` con el JSON real (`sessionId`, `message`, `reply`).
-- Sincronizar `env.example` con `getEnv` (OpenRouter, `CHAT_API_PORT`, etc.).
+**Criterio de salida:** Se pueden recibir velas en tiempo real y mantener buffer actualizado por símbolo.
 
-**Criterio de salida:** flujo “servidor + web + sesión” funciona sin adivinar el formato.
+### Fase 2: Indicators Layer
 
----
+**Objetivo:** Cálculo confiable y eficiente de indicadores técnicos.
 
-### Fase 4: Pruebas y calidad
+**Actividades:**
+- Instalar y configurar `trading-signals`.
+- Implementar cálculo de **RSI(14)** y **MACD(12,26,9)**.
+- Crear funciones que calculen indicadores solo cuando se cierra una vela.
+- Añadir detección básica de señales técnicas (cruce MACD, niveles de RSI).
 
-**Objetivo:** ampliar cobertura más allá de los tests existentes (hoy hay tests de normalización de velas).
+**Criterio de salida:** Los indicadores se calculan correctamente a partir del buffer de velas.
 
-**Actividades:** runner (Vitest o Node test), tests de `getEnv`, utilidades de herramientas, opcional `supertest` con `runAgent` mockeado.
+### Fase 3: Analysis Layer - LangGraph
 
-**Criterio de salida:** regresiones detectables por tests en el alcance cubierto.
+**Objetivo:** Migrar a una orquestación moderna y reactiva.
 
----
+**Actividades:**
+- Definir el estado del graph (`agent/state.ts`).
+- Crear nodos: `computeIndicators`, `evaluateLLM`, `decideAction`, `notify`.
+- Implementar flujo condicional (solo invocar LLM si hay señal técnica potencial).
+- Actualizar `createGraph.ts` y `runAgent.ts`.
 
-### Fase 5: Documentación y handoff
+**Criterio de salida:** El LangGraph completo procesa una vela → indicadores → evaluación LLM → decisión.
 
-**Objetivo:** README y docs coherentes; roadmap incremental (más timeframes, order book, persistencia, backtesting, etc.).
+### Fase 4: Alertas y Salida
 
-**Criterio de salida:** una persona nueva puede ejecutar y extender el proyecto.
+**Objetivo:** Generar valor usable.
+
+**Actividades:**
+- Implementar nodo de decisión y generación de alertas.
+- Añadir canales de notificación (Telegram y/o Discord como mínimo).
+- Mejorar prompt del LLM para respuestas didácticas y estructuradas.
+- Actualizar CLI y API para mostrar señales y alertas.
+
+**Criterio de salida:** El sistema genera alertas claras cuando detecta oportunidades.
+
+### Fase 5: Pruebas, Calidad y Documentación
+
+**Objetivo:** Sistema confiable y fácil de mantener.
+
+**Actividades:**
+- Añadir tests unitarios para indicadores y buffer.
+- Tests de integración para WebSocket (con mocks).
+- Actualizar README, guías de desarrollo y ejemplos.
+- Preparar scripts de arranque claros (`npm run dev`, `npm run start:cli`, etc.).
+
+**Criterio de salida:** Nueva persona puede clonar, configurar y ejecutar el proyecto sin problemas.
 
 ---
 
 ## 5. Cronograma sugerido (iterativo)
 
-- **Semana 1:** Fase 0 + Fase 1  
-- **Semana 2:** Fase 2  
-- **Semana 3:** Fase 3  
-- **Semana 4:** Fase 4 + Fase 5  
+- **Semana 1:** Fase 0 + Fase 1 (WebSocket + Buffer)
+- **Semana 2:** Fase 2 (Indicators Layer)
+- **Semana 3:** Fase 3 (LangGraph completo)
+- **Semana 4:** Fase 4 (Alertas) + Fase 5 (Pruebas y docs)
 
 ---
 
-## 6. Definition of Done operativa
+## 6. Definition of Done (DoD)
 
-- Comportamiento acorde a **agente de mercado** y español claro.
-- Casos prioritarios: market data, mixtos, conversación sin herramientas.
-- CLI y API documentados; `web/` alineado.
-- `env.example` y README coherentes con `getEnv`.
-- Brief, plan y arquitectura reflejan el repositorio.
+- La documentación (`brief-agent.md`, `architecture.md`, `plan-agent.md`) está actualizada y coherente.
+- El sistema usa **WebSockets** para datos en tiempo real.
+- RSI y MACD se calculan correctamente en la capa de Indicators.
+- El LangGraph procesa el flujo completo de forma eficiente.
+- El LLM se invoca solo cuando hay señales técnicas potenciales.
+- CLI y API HTTP siguen funcionales y devuelven respuestas en español.
+- Todo cambio importante está documentado.
+- El tono del agente es profesional, didáctico y prudente.
 
 ---
 
 ## 7. Riesgos y mitigaciones
 
-- **Alucinaciones / sobrecerteza:** mitigar con prompt explícito y separar **hechos** (velas) de **interpretación**.
-- **Tools de market data mal usadas:** mitigar con descripciones de tool, límites de buffer y pruebas manuales (fugas de WS, suscripciones olvidadas).
-- **Memoria solo en RAM:** documentar; roadmap si hace falta persistencia.
-- **Regresiones en API:** tests de contrato / mocks.
-- **Docs vs código:** Fase 0 y revisión al cerrar cada entrega.
+- **Costo de LLM**: Mitigar invocando el modelo solo en señales pre-filtradas.
+- **Latencia del WebSocket**: Usar buffers eficientes y backpressure.
+- **Complejidad de LangGraph**: Empezar con graph simple y añadir complejidad gradualmente.
+- **Precisión de indicadores**: Validar cálculos contra librerías conocidas y datos históricos.
+- **Alucinaciones del LLM**: Prompt muy estricto + salida estructurada con parser.
+- **Dependencia de APIs externas**: Tener fallback o mocks para desarrollo.
 
 ---
 
-## 8. Próximos pasos
+## 8. Próximos pasos inmediatos
 
-1. Fase 0 en una sesión corta (demo CLI + API).  
-2. Fase 1: scripts y README.  
-3. Fase 2 y 3 en paralelo con cuidado en el contrato del API.  
-4. Registrar decisiones de producto y de prompt.  
+1. Finalizar la actualización de los tres documentos (brief, architecture y plan).
+2. Decidir API WebSocket principal (Finnhub vs Binance) y obtener keys.
+3. Iniciar Fase 1: Implementar `MarketDataService` y `CandleBuffer`.
+4. Revisar y aprobar la nueva estructura de carpetas propuesta en `architecture.md`.

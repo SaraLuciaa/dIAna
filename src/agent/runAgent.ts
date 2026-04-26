@@ -1,17 +1,13 @@
 import { HumanMessage, type BaseMessage } from "@langchain/core/messages";
-import type { ReactAgent } from "langchain";
 import {
   createTraceCollector,
   detectTraceLoopWarnings,
   formatTraceForConsole,
   type AgentTraceStep
 } from "./agentTrace.js";
-import { buildAgentExecutor } from "./createAgent.js";
-
-type AgentInvoker = Pick<ReactAgent, "invoke">;
+import { createGraph } from "./createGraph.js";
 
 export interface RunAgentOptions {
-  executor?: AgentInvoker;
   verbose?: boolean;
   /** Turnos previos (sin el mensaje actual); `input` es solo la última pregunta del usuario. */
   chatHistory?: BaseMessage[];
@@ -29,31 +25,18 @@ export interface RunAgentResult {
   traceWarnings?: string[];
 }
 
-function lastAiText(messages: BaseMessage[]): string {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const m = messages[i];
-    if (m._getType() === "ai") {
-      return String(m.content ?? "");
-    }
-  }
-  return "";
-}
-
 export async function runAgent(input: string, options: RunAgentOptions = {}): Promise<RunAgentResult> {
-  const agent = options.executor ?? buildAgentExecutor();
   const history = options.chatHistory ?? [];
   const includeTrace = options.includeTrace === true;
   const traceCollector = includeTrace ? createTraceCollector() : null;
 
-  const result = await agent.invoke(
-    {
-      messages: [...history, new HumanMessage(input)]
-    },
+  const graph = createGraph();
+  const result = await graph.invoke(
+    { messages: [...history, new HumanMessage(input)] },
     traceCollector ? { callbacks: [traceCollector.handler] } : undefined
   );
 
-  const msgs = (result as { messages?: BaseMessage[] }).messages ?? [];
-  const reply = lastAiText(msgs);
+  const reply = typeof (result as any)?.reply === "string" ? String((result as any).reply) : "";
 
   if (!traceCollector) {
     return { reply };
